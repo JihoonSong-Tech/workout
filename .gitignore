@@ -1,7 +1,6 @@
 .gradle/
-build/
-android/build/
-android/app/build/
-android/local.properties
+**/build/
+**/.gradle/
+**/local.properties
 .DS_Store
 *.apk.zip
