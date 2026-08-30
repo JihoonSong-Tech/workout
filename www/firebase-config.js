@@ -1,14 +1,13 @@
 // Firebase 설정 파일
-// https://console.firebase.google.com 에서 프로젝트 생성 후
-// 프로젝트 설정 > 내 앱 (웹 </>) 에서 발급받은 firebaseConfig 값을 아래에 붙여넣으세요.
-
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyBfBMnPKGBqEPUg7bg5_ykdgC7yWfwE8QU",
+  authDomain: "workout-608fa.firebaseapp.com",
+  databaseURL: "https://workout-608fa-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "workout-608fa",
+  storageBucket: "workout-608fa.firebasestorage.app",
+  messagingSenderId: "846866052805",
+  appId: "1:846866052805:web:7179c06f05791a3af862ac",
+  measurementId: "G-BCT63XVF1W"
 };
 
 // 설정 완료 여부 자동 확인
