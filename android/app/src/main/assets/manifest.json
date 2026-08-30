@@ -1,7 +1,7 @@
 {
-  "name": "20분 AMRAP 운동 카운터",
-  "short_name": "AMRAP 20",
-  "description": "턱걸이 5개, 팔굽혀펴기 15개, 스쿼트 20개 20분 AMRAP 루틴 카운터",
+  "name": "신디(Cindy) - 20분 스파이더맨 AMRAP 루틴",
+  "short_name": "신디 루틴",
+  "description": "스파이더맨 톰 홀랜드의 20분 신디(Cindy) 맨몸운동 루틴! 턱걸이 5개, 팔굽혀펴기 15개, 스쿼트 20개 AMRAP 카운터",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#090d16",
