@@ -282,6 +282,48 @@
         </button>
       </div>
 
+      <!-- Interstitial Ad Screen (수익 창출 전면 광고 화면) -->
+      <div id="modalInterstitialAd" class="modal-overlay ad-modal-overlay">
+        <div class="ad-modal-card">
+          <div class="ad-top-bar">
+            <span class="sponsored-tag">📢 SPONSORED AD</span>
+            <div class="ad-countdown-wrap">
+              <span id="adCountdownText">5초 후 결과 공개</span>
+              <button id="btnSkipAd" class="btn-skip-ad" disabled>
+                <span id="skipBtnLabel">5초 후 건너뛰기</span> ➔
+              </button>
+            </div>
+          </div>
+
+          <!-- Ad Content Box -->
+          <div class="ad-content-box">
+            <!-- Google AdSense Container (애드센스 슬롯 / 쿠팡 파트너스) -->
+            <div id="googleAdsenseSlot" class="adsense-slot-container">
+              <!-- 피트니스 맞춤형 고수익 추천 스폰서 배너 -->
+              <a href="https://link.coupang.com" target="_blank" rel="noopener noreferrer" class="fitness-sponsor-banner">
+                <div class="ad-banner-badge">🔥 운동 직후 30분 골든타임!</div>
+                <div class="ad-banner-main">
+                  <div class="ad-banner-emoji">🥤</div>
+                  <div class="ad-banner-info">
+                    <h4>근손실 방지! 100% WPI 프리미엄 단백질 쉐이크</h4>
+                    <p>오늘의 턱걸이 & 스쿼트 근성장을 200% 극대화하는 단백질 보충 가이드</p>
+                    <span class="ad-cta-btn">스폰서 혜택 & 최저가 확인 ➔</span>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </div>
+
+          <!-- Ad Bottom Bar -->
+          <div class="ad-bottom-bar">
+            <span class="ad-notice-text">광고 수익은 무료 서비스 유지 및 서버 운영에 사용됩니다 🙏</span>
+            <button id="btnProceedToResults" class="btn-proceed-results" style="display:none;">
+              🏆 운동 결과 및 성과 분석 보기 ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Workout Summary Modal -->
       <div id="modalSummary" class="modal-overlay">
         <div class="modal-card modal-card-lg">

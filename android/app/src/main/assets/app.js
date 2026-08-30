@@ -313,7 +313,13 @@
   const btnSubmitEmailAuth = document.getElementById('btnSubmitEmailAuth');
   const authModeQuestion = document.getElementById('authModeQuestion');
   const btnToggleAuthMode = document.getElementById('btnToggleAuthMode');
-  const firebaseNoticeBox = document.getElementById('firebaseNoticeBox');
+  // Interstitial Ad Elements
+  const modalInterstitialAd = document.getElementById('modalInterstitialAd');
+  const btnSkipAd = document.getElementById('btnSkipAd');
+  const skipBtnLabel = document.getElementById('skipBtnLabel');
+  const adCountdownText = document.getElementById('adCountdownText');
+  const btnProceedToResults = document.getElementById('btnProceedToResults');
+  let adCountdownTimer = null;
 
   let isAuthSignUpMode = false;
   let firebaseAuth = null;
@@ -806,6 +812,63 @@
 
     updateSummaryMetricsDisplay();
 
+    // 결과 표시 전 전면 광고(Interstitial Ad) 노출
+    showInterstitialAdThenSummary();
+  }
+
+  function showInterstitialAdThenSummary() {
+    if (!modalInterstitialAd) {
+      modalSummary.classList.add('show');
+      return;
+    }
+
+    modalInterstitialAd.classList.add('show');
+    let remainingAdSec = 5;
+
+    if (btnSkipAd) {
+      btnSkipAd.setAttribute('disabled', 'true');
+    }
+    if (skipBtnLabel) {
+      skipBtnLabel.textContent = `${remainingAdSec}초 후 건너뛰기`;
+    }
+    if (adCountdownText) {
+      adCountdownText.textContent = `${remainingAdSec}초 후 결과 공개`;
+    }
+    if (btnProceedToResults) {
+      btnProceedToResults.style.display = 'none';
+    }
+
+    clearInterval(adCountdownTimer);
+    adCountdownTimer = setInterval(() => {
+      remainingAdSec--;
+      if (remainingAdSec > 0) {
+        if (skipBtnLabel) skipBtnLabel.textContent = `${remainingAdSec}초 후 건너뛰기`;
+        if (adCountdownText) adCountdownText.textContent = `${remainingAdSec}초 후 결과 공개`;
+      } else {
+        clearInterval(adCountdownTimer);
+        adCountdownTimer = null;
+        if (btnSkipAd) {
+          btnSkipAd.removeAttribute('disabled');
+        }
+        if (skipBtnLabel) {
+          skipBtnLabel.textContent = '건너뛰기';
+        }
+        if (adCountdownText) {
+          adCountdownText.textContent = '결과 준비 완료!';
+        }
+        if (btnProceedToResults) {
+          btnProceedToResults.style.display = 'block';
+        }
+      }
+    }, 1000);
+  }
+
+  function closeAdAndShowSummary() {
+    clearInterval(adCountdownTimer);
+    adCountdownTimer = null;
+    if (modalInterstitialAd) {
+      modalInterstitialAd.classList.remove('show');
+    }
     modalSummary.classList.add('show');
   }
 
@@ -1360,16 +1423,28 @@
     }
   });
 
+  if (btnSkipAd) {
+    btnSkipAd.addEventListener('click', closeAdAndShowSummary);
+  }
+
+  if (btnProceedToResults) {
+    btnProceedToResults.addEventListener('click', closeAdAndShowSummary);
+  }
+
   btnShareRecord.addEventListener('click', copyShareText);
   btnSaveRecord.addEventListener('click', saveHistoryRecord);
   btnCloseSummary.addEventListener('click', () => modalSummary.classList.remove('show'));
 
   // Close modals on backdrop click
-  [modalSummary, modalHistory, modalSettings, modalAuth].forEach((modal) => {
+  [modalSummary, modalHistory, modalSettings, modalAuth, modalInterstitialAd].forEach((modal) => {
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
-          modal.classList.remove('show');
+          if (modal === modalInterstitialAd) {
+            closeAdAndShowSummary();
+          } else {
+            modal.classList.remove('show');
+          }
         }
       });
     }
