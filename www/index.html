@@ -91,17 +91,34 @@
               <span id="statCurrentRound" class="stat-sub">1 라운드 진행 중</span>
             </div>
 
-            <div class="stat-box">
-              <span class="stat-label">총 횟수</span>
-              <div class="stat-value-wrap">
-                <span id="statTotalReps" class="stat-value">0</span>
-                <span class="stat-unit">회</span>
+            <!-- 항목별 횟수 상세 블록 -->
+            <div class="stat-box breakdown-stat">
+              <div class="breakdown-header">
+                <span class="stat-label">종목별 횟수</span>
+                <span class="total-badge">총 <strong id="statTotalReps">0</strong>회</span>
+              </div>
+              <div class="reps-mini-grid">
+                <div class="mini-rep-item item-pullup">
+                  <span class="m-emoji">🧗‍♂️</span>
+                  <span class="m-name">턱걸이</span>
+                  <span id="statMiniPullup" class="m-count">0</span><small>회</small>
+                </div>
+                <div class="mini-rep-item item-pushup">
+                  <span class="m-emoji">💪</span>
+                  <span class="m-name">푸시업</span>
+                  <span id="statMiniPushup" class="m-count">0</span><small>회</small>
+                </div>
+                <div class="mini-rep-item item-squat">
+                  <span class="m-emoji">🦵</span>
+                  <span class="m-name">스쿼트</span>
+                  <span id="statMiniSquat" class="m-count">0</span><small>회</small>
+                </div>
               </div>
               <span id="statPace" class="stat-sub">0.0 세트/분</span>
             </div>
 
             <div class="stat-box calorie-stat">
-              <span class="stat-label">소모 칼로리 (추정)</span>
+              <span class="stat-label">소모 칼로리 (운동량 기반)</span>
               <div class="stat-value-wrap">
                 <span id="statCalories" class="stat-value calorie-val">0</span>
                 <span class="stat-unit">kcal</span>
@@ -115,6 +132,7 @@
             <div class="hints-title">⌨️ 단축키 안내</div>
             <div class="hints-grid">
               <span><kbd>Space</kbd> / <kbd>Enter</kbd> 완료</span>
+              <span><kbd>N</kbd> 다음세트(더블)</span>
               <span><kbd>P</kbd> 시작/일시정지</span>
               <span><kbd>U</kbd> 되돌리기</span>
               <span><kbd>R</kbd> 리셋</span>
@@ -226,8 +244,18 @@
 
       </div>
 
-      <!-- Bottom Massive Action Button -->
+      <!-- Bottom Massive Action Button + Fast Next Set Button -->
       <div class="bottom-action-bar">
+        <!-- 2회 클릭 시 세트 한 번에 넘기기 버튼 -->
+        <button id="btnFastNextSet" class="btn-fast-next-set" title="실수 방지를 위해 2번 클릭 시 다음 세트로 바로 넘어갑니다">
+          <span class="fast-set-icon">⚡</span>
+          <div class="fast-set-content">
+            <span id="fastSetMainText" class="fast-set-title">+1세트</span>
+            <span id="fastSetSubText" class="fast-set-sub">2번 클릭</span>
+          </div>
+        </button>
+
+        <!-- 기본 단계별 완료 버튼 -->
         <button id="btnMassiveAction" class="btn-massive-action">
           <div class="massive-action-content">
             <span id="massiveActionSubtitle" class="action-subtitle">현재 단계</span>

@@ -51,32 +51,29 @@
   let isVibrationEnabled = true;
   let wakeLock = null;
 
-  // --- Calorie & Work Volume Calculator Engine ---
+  // --- Calorie & Work Volume Calculator Engine (순수 운동 행위/반복수 기반) ---
   function calculateWorkoutMetrics(weight, gender, intensity, pullups, pushups, squats, elapsedSec) {
     const w = Math.max(30, Number(weight) || 70);
     const intens = Number(intensity) || 1.15;
+    const genderFactor = (gender === 'female') ? 0.92 : 1.0;
     
     // Mechanical work volume (kg lifted)
     const volumeKg = Math.round(pullups * w + pushups * (w * 0.64) + squats * (w * 0.70));
     
-    // Mechanical calorie equivalents (kcal)
-    const pullupCal = pullups * w * 0.0053;
-    const pushupCal = pushups * (w * 0.64) * 0.0038;
-    const squatCal = squats * (w * 0.70) * 0.0053;
-    const mechanicalTotalCal = pullupCal + pushupCal + squatCal;
+    // Pure Activity/Repetition-Based Calories (운동 행위 기반 정밀 계산)
+    // 1) 턱걸이 (Pull-up): 전신 체중 리프팅 1회당 약 w * 0.0165 kcal (70kg 기준 1회 ~1.15 kcal, 5회 = 5.78 kcal)
+    const pullupCal = pullups * w * 0.0165 * intens * genderFactor;
     
-    // Aerobic / HIIT metabolic burn from elapsed time
-    const elapsedMinutes = (elapsedSec > 0 ? elapsedSec : 1) / 60;
-    const baseMet = 9.0 * intens;
-    const aerobicBaseCal = ((baseMet * 3.5 * w) / 200) * elapsedMinutes;
+    // 2) 팔굽혀펴기 (Push-up): 체중의 64% 프레스 1회당 약 w * 0.0080 kcal (70kg 기준 1회 ~0.56 kcal, 15회 = 8.40 kcal)
+    const pushupCal = pushups * w * 0.0080 * intens * genderFactor;
     
-    // Direct calories
-    let directCal = Math.round(Math.max(aerobicBaseCal, aerobicBaseCal * 0.45 + mechanicalTotalCal * 1.25));
-    if (gender === 'female') {
-      directCal = Math.round(directCal * 0.92);
-    }
+    // 3) 스쿼트 (Squat): 체중의 70% 스쿼트 1회당 약 w * 0.0091 kcal (70kg 기준 1회 ~0.64 kcal, 20회 = 12.74 kcal)
+    const squatCal = squats * w * 0.0091 * intens * genderFactor;
     
-    // EPOC (Afterburn effect - 12~18%)
+    // 직접 소모 칼로리 (운동을 하지 않고 시간만 흐르면 0 kcal로 정직하게 유지)
+    const directCal = Math.round(pullupCal + pushupCal + squatCal);
+    
+    // EPOC (고강도 저항 서킷 애프터번 효과 - 직접 소모량의 15% 추가)
     const epocCal = Math.round(directCal * 0.15);
     const totalCal = directCal + epocCal;
     
@@ -235,6 +232,11 @@
   const statCalories = document.getElementById('statCalories');
   const statWeightLabel = document.getElementById('statWeightLabel');
 
+  // Mini Reps Breakdown Elements
+  const statMiniPullup = document.getElementById('statMiniPullup');
+  const statMiniPushup = document.getElementById('statMiniPushup');
+  const statMiniSquat = document.getElementById('statMiniSquat');
+
   const cardPullup = document.getElementById('cardPullup');
   const cardPushup = document.getElementById('cardPushup');
   const cardSquat = document.getElementById('cardSquat');
@@ -246,6 +248,11 @@
   const btnDonePullup = document.getElementById('btnDonePullup');
   const btnDonePushup = document.getElementById('btnDonePushup');
   const btnDoneSquat = document.getElementById('btnDoneSquat');
+
+  // Fast Next Set (+1 Set) Elements
+  const btnFastNextSet = document.getElementById('btnFastNextSet');
+  const fastSetMainText = document.getElementById('fastSetMainText');
+  const fastSetSubText = document.getElementById('fastSetSubText');
 
   const btnMassiveAction = document.getElementById('btnMassiveAction');
   const massiveActionTitle = document.getElementById('massiveActionTitle');
@@ -380,6 +387,11 @@
     statTotalReps.textContent = getCombinedTotalReps();
     statCurrentRound.textContent = `${completedSets + 1} 라운드 진행 중`;
 
+    // Update Mini breakdown items
+    if (statMiniPullup) statMiniPullup.textContent = repsPullup;
+    if (statMiniPushup) statMiniPushup.textContent = repsPushup;
+    if (statMiniSquat) statMiniSquat.textContent = repsSquat;
+
     const elapsedMinutes = (targetDurationSeconds - remainingSeconds) / 60;
     if (elapsedMinutes > 0.1 && completedSets > 0) {
       const pace = (completedSets / elapsedMinutes).toFixed(1);
@@ -388,7 +400,7 @@
       statPace.textContent = '0.0 세트/분';
     }
 
-    // Calculate real-time estimated calories
+    // Calculate real-time activity-based calories
     const metrics = calculateWorkoutMetrics(
       userProfile.weight,
       userProfile.gender,
@@ -416,6 +428,76 @@
       repsSquat
     });
     if (undoStack.length > 50) undoStack.shift();
+  }
+
+  // --- Fast Next Set (+1 Set) Double-Click Safety Logic ---
+  let fastSetConfirmTimer = null;
+  let isFastSetConfirming = false;
+
+  function resetFastSetButtonState() {
+    isFastSetConfirming = false;
+    clearTimeout(fastSetConfirmTimer);
+    fastSetConfirmTimer = null;
+    if (btnFastNextSet) {
+      btnFastNextSet.classList.remove('confirm-mode');
+      if (fastSetMainText) fastSetMainText.textContent = '+1세트';
+      if (fastSetSubText) fastSetSubText.textContent = '2번 클릭';
+    }
+  }
+
+  function handleFastNextSetClick() {
+    if (!isTimerRunning) {
+      startTimer();
+    }
+
+    if (!isFastSetConfirming) {
+      // 1st click: Enter confirmation mode
+      isFastSetConfirming = true;
+      if (btnFastNextSet) {
+        btnFastNextSet.classList.add('confirm-mode');
+        if (fastSetMainText) fastSetMainText.textContent = '⚠️ 한 번 더!';
+        if (fastSetSubText) fastSetSubText.textContent = '2초 내 클릭';
+      }
+      playTone(520, 'triangle', 0.12, 0.35);
+      vibrate(50);
+      showShortcutToast('⚠️ 한 번 더 클릭하면 1세트가 즉시 완료됩니다');
+
+      fastSetConfirmTimer = setTimeout(() => {
+        resetFastSetButtonState();
+      }, 2500);
+    } else {
+      // 2nd click: Confirmed! Execute fast next set
+      resetFastSetButtonState();
+      executeFastNextSet();
+    }
+  }
+
+  function executeFastNextSet() {
+    saveSnapshot();
+
+    // Complete the current round's remaining exercises
+    if (currentStep === 0) {
+      repsPullup += 5;
+      repsPushup += 15;
+      repsSquat += 20;
+    } else if (currentStep === 1) {
+      repsPushup += 15;
+      repsSquat += 20;
+    } else if (currentStep === 2) {
+      repsSquat += 20;
+    }
+
+    completedSets += 1;
+    currentStep = 0;
+
+    playSetCompleteSound();
+    vibrate([80, 50, 100, 50, 150]);
+    triggerCelebrationEffect();
+    speak(`${completedSets}세트 완료! 멋집니다. 다음 턱걸이 시작!`);
+    showShortcutToast(`⚡ ${completedSets}세트 완료 (+1 Set)`);
+
+    updateExerciseCardsUI();
+    updateStatsUI();
   }
 
   // --- Step Advance / Completion Logic ---
@@ -856,7 +938,14 @@
       return;
     }
 
-    // 6) 1, 2, 3: Direct complete for specific exercise
+    // 6) N (or ㅜ in Korean): Fast Next Set (Double click/press)
+    if (code === 'KeyN' || key === 'n' || key === 'ㅜ') {
+      e.preventDefault();
+      handleFastNextSetClick();
+      return;
+    }
+
+    // 7) 1, 2, 3: Direct complete for specific exercise
     if (code === 'Digit1' || code === 'Numpad1' || key === '1') {
       e.preventDefault();
       adjustRep('pullup', 5);
@@ -878,6 +967,10 @@
   });
 
   // --- Event Listeners ---
+  if (btnFastNextSet) {
+    btnFastNextSet.addEventListener('click', handleFastNextSetClick);
+  }
+
   btnStartPause.addEventListener('click', () => {
     if (isTimerRunning) {
       pauseTimer();
