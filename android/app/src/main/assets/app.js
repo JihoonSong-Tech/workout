@@ -292,13 +292,33 @@
 
   const btnShareRecord = document.getElementById('btnShareRecord');
   const btnSaveRecord = document.getElementById('btnSaveRecord');
-  const btnCloseSummary = document.getElementById('btnCloseSummary');
-  const historyList = document.getElementById('historyList');
-  const btnClearHistory = document.getElementById('btnClearHistory');
-  const btnCloseHistory = document.getElementById('btnCloseHistory');
-  const btnSaveSettings = document.getElementById('btnSaveSettings');
-  const toggleVoice = document.getElementById('toggleVoice');
-  const toggleVibration = document.getElementById('toggleVibration');
+  // Auth & User Elements
+  const btnOpenAuth = document.getElementById('btnOpenAuth');
+  const userProfileChip = document.getElementById('userProfileChip');
+  const userAvatar = document.getElementById('userAvatar');
+  const userAvatarFallback = document.getElementById('userAvatarFallback');
+  const userName = document.getElementById('userName');
+  const btnLogout = document.getElementById('btnLogout');
+
+  // Auth Modal Elements
+  const modalAuth = document.getElementById('modalAuth');
+  const btnCloseAuth = document.getElementById('btnCloseAuth');
+  const btnGoogleLogin = document.getElementById('btnGoogleLogin');
+  const formEmailAuth = document.getElementById('formEmailAuth');
+  const authDisplayName = document.getElementById('authDisplayName');
+  const groupDisplayName = document.getElementById('groupDisplayName');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authErrorMessage = document.getElementById('authErrorMessage');
+  const btnSubmitEmailAuth = document.getElementById('btnSubmitEmailAuth');
+  const authModeQuestion = document.getElementById('authModeQuestion');
+  const btnToggleAuthMode = document.getElementById('btnToggleAuthMode');
+  const firebaseNoticeBox = document.getElementById('firebaseNoticeBox');
+
+  let isAuthSignUpMode = false;
+  let firebaseAuth = null;
+  let firestoreDb = null;
+  let currentUser = null;
 
   // --- Formatting Helpers ---
   function formatTime(seconds) {
@@ -309,6 +329,86 @@
 
   function getCombinedTotalReps() {
     return repsPullup + repsPushup + repsSquat;
+  }
+
+  // --- Firebase Cloud Auth & Database Engine ---
+  function initFirebase() {
+    try {
+      if (typeof firebase !== 'undefined' && typeof FIREBASE_CONFIG !== 'undefined' && typeof IS_FIREBASE_CONFIGURED !== 'undefined' && IS_FIREBASE_CONFIGURED) {
+        if (!firebase.apps || !firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        firebaseAuth = firebase.auth();
+        firestoreDb = firebase.firestore();
+
+        // Listen for authentication changes
+        firebaseAuth.onAuthStateChanged(handleAuthStateChanged);
+      } else {
+        console.info('Firebase not configured. Running in offline localStorage mode.');
+      }
+    } catch (err) {
+      console.warn('Firebase initialization note:', err);
+    }
+  }
+
+  function handleAuthStateChanged(user) {
+    currentUser = user;
+    if (user) {
+      // Logged in
+      if (btnOpenAuth) btnOpenAuth.style.display = 'none';
+      if (userProfileChip) userProfileChip.style.display = 'flex';
+      if (userName) userName.textContent = user.displayName || user.email?.split('@')[0] || '회원';
+      
+      if (user.photoURL && userAvatar) {
+        userAvatar.src = user.photoURL;
+        userAvatar.style.display = 'inline-block';
+        if (userAvatarFallback) userAvatarFallback.style.display = 'none';
+      } else {
+        if (userAvatar) userAvatar.style.display = 'none';
+        if (userAvatarFallback) userAvatarFallback.style.display = 'inline-block';
+      }
+
+      if (modalAuth) modalAuth.classList.remove('show');
+      loadUserProfileFromCloud(user.uid);
+    } else {
+      // Logged out
+      if (btnOpenAuth) btnOpenAuth.style.display = 'flex';
+      if (userProfileChip) userProfileChip.style.display = 'none';
+    }
+  }
+
+  async function loadUserProfileFromCloud(uid) {
+    if (!firestoreDb) return;
+    try {
+      const doc = await firestoreDb.collection('users').doc(uid).get();
+      if (doc.exists && doc.data().profile) {
+        userProfile = Object.assign(userProfile, doc.data().profile);
+        localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(userProfile));
+        updateStatsUI();
+      } else {
+        // Upload initial profile
+        await firestoreDb.collection('users').doc(uid).set({
+          profile: userProfile,
+          displayName: currentUser?.displayName || '',
+          email: currentUser?.email || '',
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Error loading cloud profile:', e);
+    }
+  }
+
+  async function saveUserProfileToCloud() {
+    if (!firestoreDb || !currentUser) return;
+    try {
+      await firestoreDb.collection('users').doc(currentUser.uid).set({
+        profile: userProfile,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    } catch (e) {
+      console.warn('Error saving cloud profile:', e);
+    }
   }
 
   // --- UI Update Functions ---
@@ -726,7 +826,7 @@
     }
   }
 
-  function saveHistoryRecord() {
+  async function saveHistoryRecord() {
     const history = getHistory();
     const actualDuration = elapsedWorkoutSeconds > 0 ? elapsedWorkoutSeconds : (targetDurationSeconds - remainingSeconds);
     const weight = Number(summaryWeightInput?.value) || userProfile.weight || 70;
@@ -762,11 +862,23 @@
       directCalories: metrics.directCal,
       epocCalories: metrics.epocCal,
       volumeKg: metrics.volumeKg,
-      userWeight: weight
+      userWeight: weight,
+      isCloud: Boolean(currentUser)
     };
 
     history.unshift(newRecord);
     localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+
+    // Save to Firestore Cloud DB if logged in
+    if (firestoreDb && currentUser) {
+      try {
+        await firestoreDb.collection('users').doc(currentUser.uid).collection('history').doc(String(newRecord.id)).set(newRecord);
+        showShortcutToast('☁️ 클라우드에 기록이 안전하게 저장되었습니다');
+      } catch (e) {
+        console.warn('Failed to save record to cloud:', e);
+      }
+    }
+
     modalSummary.classList.remove('show');
     showHistoryModal();
   }
@@ -811,10 +923,26 @@
     }
   }
 
-  function showHistoryModal() {
-    const history = getHistory();
-    historyList.innerHTML = '';
+  async function showHistoryModal() {
+    let history = getHistory();
+    historyList.innerHTML = '<div class="loading-history">기록을 불러오는 중...</div>';
+    modalHistory.classList.add('show');
 
+    // Fetch from cloud if user is logged in
+    if (firestoreDb && currentUser) {
+      try {
+        const snap = await firestoreDb.collection('users').doc(currentUser.uid).collection('history').orderBy('id', 'desc').limit(50).get();
+        if (!snap.empty) {
+          history = [];
+          snap.forEach((doc) => history.push(doc.data()));
+          localStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(history));
+        }
+      } catch (e) {
+        console.warn('Using local history cache:', e);
+      }
+    }
+
+    historyList.innerHTML = '';
     if (history.length === 0) {
       historyList.innerHTML = '<div class="empty-history">아직 저장된 운동 기록이 없습니다.<br>오늘의 20분 챌린지를 완료해 보세요! 💪</div>';
     } else {
@@ -823,9 +951,10 @@
         div.className = 'history-item';
         const calText = item.calories ? ` · 🔥 ${item.calories} kcal` : '';
         const volText = item.volumeKg ? ` · 🏋️‍♂️ ${item.volumeKg.toLocaleString()}kg` : '';
+        const cloudBadge = item.isCloud ? '<span title="클라우드 동기화됨" style="font-size: 11px; margin-right: 3px;">☁️</span>' : '';
         div.innerHTML = `
           <div>
-            <div class="history-date">${item.date} (${formatTime(item.duration || 1200)})${calText}${volText}</div>
+            <div class="history-date">${cloudBadge}${item.date} (${formatTime(item.duration || 1200)})${calText}${volText}</div>
             <div class="history-details">
               턱걸이 ${item.pullups} · 팔굽혀펴기 ${item.pushups} · 스쿼트 ${item.squats} (총 ${item.totalReps}회)
             </div>
@@ -835,8 +964,6 @@
         historyList.appendChild(div);
       });
     }
-
-    modalHistory.classList.add('show');
   }
 
   // --- Fullscreen Toggle ---
@@ -1072,6 +1199,146 @@
     isVibrationEnabled = e.target.checked;
   });
 
+  // --- Auth Event Handlers ---
+  function showAuthError(msg) {
+    if (authErrorMessage) {
+      authErrorMessage.textContent = msg;
+      authErrorMessage.style.display = 'block';
+    }
+  }
+
+  function clearAuthError() {
+    if (authErrorMessage) {
+      authErrorMessage.textContent = '';
+      authErrorMessage.style.display = 'none';
+    }
+  }
+
+  function toggleAuthMode() {
+    isAuthSignUpMode = !isAuthSignUpMode;
+    clearAuthError();
+    if (isAuthSignUpMode) {
+      document.getElementById('authModalTitle').textContent = '새 계정 회원가입';
+      groupDisplayName.style.display = 'block';
+      btnSubmitEmailAuth.textContent = '회원가입 완료';
+      authModeQuestion.textContent = '이미 계정이 있으신가요?';
+      btnToggleAuthMode.textContent = '로그인하기';
+    } else {
+      document.getElementById('authModalTitle').textContent = '사용자 로그인 & 클라우드 연동';
+      groupDisplayName.style.display = 'none';
+      btnSubmitEmailAuth.textContent = '로그인';
+      authModeQuestion.textContent = '계정이 없으신가요?';
+      btnToggleAuthMode.textContent = '회원가입하기';
+    }
+  }
+
+  async function handleGoogleLogin() {
+    clearAuthError();
+    if (!firebaseAuth || !IS_FIREBASE_CONFIGURED) {
+      if (firebaseNoticeBox) firebaseNoticeBox.style.display = 'block';
+      showShortcutToast('⚙️ firebase-config.js 에 키 등록이 필요합니다');
+      return;
+    }
+
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await firebaseAuth.signInWithPopup(provider);
+      modalAuth.classList.remove('show');
+      showShortcutToast('✅ Google 로그인 성공!');
+    } catch (err) {
+      console.warn('Google login error:', err);
+      showAuthError(getKoreanAuthError(err.code) || err.message);
+    }
+  }
+
+  async function handleEmailAuthSubmit(e) {
+    if (e) e.preventDefault();
+    clearAuthError();
+
+    const email = authEmail?.value?.trim();
+    const password = authPassword?.value;
+    const name = authDisplayName?.value?.trim();
+
+    if (!email || !password) {
+      showAuthError('이메일과 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+
+    if (!firebaseAuth || !IS_FIREBASE_CONFIGURED) {
+      if (firebaseNoticeBox) firebaseNoticeBox.style.display = 'block';
+      showShortcutToast('⚙️ firebase-config.js 에 키 등록이 필요합니다');
+      return;
+    }
+
+    try {
+      if (isAuthSignUpMode) {
+        const userCred = await firebaseAuth.createUserWithEmailAndPassword(email, password);
+        if (name && userCred.user) {
+          await userCred.user.updateProfile({ displayName: name });
+        }
+        modalAuth.classList.remove('show');
+        showShortcutToast('🎉 회원가입 및 로그인이 완료되었습니다!');
+      } else {
+        await firebaseAuth.signInWithEmailAndPassword(email, password);
+        modalAuth.classList.remove('show');
+        showShortcutToast('✅ 로그인되었습니다!');
+      }
+    } catch (err) {
+      console.warn('Email auth error:', err);
+      showAuthError(getKoreanAuthError(err.code) || err.message);
+    }
+  }
+
+  function getKoreanAuthError(code) {
+    switch (code) {
+      case 'auth/user-not-found': return '등록되지 않은 이메일 계정입니다.';
+      case 'auth/wrong-password': return '비밀번호가 올바르지 않습니다.';
+      case 'auth/invalid-credential': return '이메일 또는 비밀번호가 올바르지 않습니다.';
+      case 'auth/email-already-in-use': return '이미 가입된 이메일 주소입니다.';
+      case 'auth/weak-password': return '비밀번호는 6자리 이상이어야 합니다.';
+      case 'auth/invalid-email': return '유효하지 않은 이메일 형식입니다.';
+      case 'auth/popup-closed-by-user': return '로그인 팝업이 닫혔습니다.';
+      case 'auth/network-request-failed': return '네트워크 연결 상태를 확인해 주세요.';
+      default: return null;
+    }
+  }
+
+  if (btnOpenAuth) {
+    btnOpenAuth.addEventListener('click', () => {
+      clearAuthError();
+      if (!IS_FIREBASE_CONFIGURED && firebaseNoticeBox) {
+        firebaseNoticeBox.style.display = 'block';
+      }
+      modalAuth.classList.add('show');
+    });
+  }
+
+  if (btnCloseAuth) {
+    btnCloseAuth.addEventListener('click', () => modalAuth.classList.remove('show'));
+  }
+
+  if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+      if (firebaseAuth) {
+        firebaseAuth.signOut().then(() => {
+          showShortcutToast('👋 로그아웃 되었습니다');
+        });
+      }
+    });
+  }
+
+  if (btnGoogleLogin) {
+    btnGoogleLogin.addEventListener('click', handleGoogleLogin);
+  }
+
+  if (btnToggleAuthMode) {
+    btnToggleAuthMode.addEventListener('click', toggleAuthMode);
+  }
+
+  if (formEmailAuth) {
+    formEmailAuth.addEventListener('submit', handleEmailAuthSubmit);
+  }
+
   btnSaveSettings.addEventListener('click', () => {
     if (settingWeight) userProfile.weight = Number(settingWeight.value) || 70;
     if (settingAge) userProfile.age = Number(settingAge.value) || 30;
@@ -1081,6 +1348,9 @@
     try {
       localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(userProfile));
     } catch (e) {}
+
+    // Save to Cloud Firestore
+    saveUserProfileToCloud();
 
     modalSettings.classList.remove('show');
     showShortcutToast('✅ 설정 및 프로필이 저장되었습니다');
@@ -1095,15 +1365,18 @@
   btnCloseSummary.addEventListener('click', () => modalSummary.classList.remove('show'));
 
   // Close modals on backdrop click
-  [modalSummary, modalHistory, modalSettings].forEach((modal) => {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        modal.classList.remove('show');
-      }
-    });
+  [modalSummary, modalHistory, modalSettings, modalAuth].forEach((modal) => {
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.remove('show');
+        }
+      });
+    }
   });
 
-  // Initialize UI
+  // Initialize UI & Firebase
+  initFirebase();
   updateTimerUI();
   updateExerciseCardsUI();
   updateStatsUI();

@@ -28,6 +28,20 @@
           <h1>루틴 카운터</h1>
         </div>
         <div class="header-right">
+          <!-- 사용자 계정 / 로그인 버튼 -->
+          <div id="authContainer" class="auth-header-container">
+            <button id="btnOpenAuth" class="btn-auth-header" title="로그인하여 개인별 기록 클라우드 동기화">
+              <span class="auth-icon">👤</span>
+              <span class="auth-text">로그인</span>
+            </button>
+            <div id="userProfileChip" class="user-profile-chip" style="display: none;">
+              <img id="userAvatar" class="user-avatar" src="" alt="user" style="display:none;">
+              <span id="userAvatarFallback" class="user-avatar-fallback">👤</span>
+              <span id="userName" class="user-name">사용자</span>
+              <button id="btnLogout" class="btn-mini-logout" title="로그아웃">로그아웃</button>
+            </div>
+          </div>
+
           <button id="btnVoiceToggle" class="icon-btn" aria-label="음성 코치 토글" title="음성 코치 (TTS) 켜기/끄기">
             <span class="icon">🗣️</span>
           </button>
@@ -512,9 +526,78 @@
         </div>
       </div>
 
+      <!-- User Auth & Cloud Sync Modal -->
+      <div id="modalAuth" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div class="modal-icon">👤</div>
+            <h2 id="authModalTitle">사용자 로그인 & 클라우드 연동</h2>
+            <p id="authModalSubtitle">로그인하면 스마트폰, 태블릿, PC 어디서든 내 기록이 연동됩니다.</p>
+          </div>
+          <div class="modal-body auth-modal-body">
+            
+            <!-- Google 1-Click Login Button -->
+            <button id="btnGoogleLogin" class="btn-google-login">
+              <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Google 계정으로 1초 로그인</span>
+            </button>
+
+            <div class="auth-divider">
+              <span>또는 이메일로 시작</span>
+            </div>
+
+            <!-- Email / Password Form -->
+            <form id="formEmailAuth" class="email-auth-form" onsubmit="return false;">
+              <div class="setting-group" id="groupDisplayName" style="display:none;">
+                <label for="authDisplayName">이름 / 닉네임</label>
+                <input type="text" id="authDisplayName" class="input-modern" placeholder="예: 지훈" autocomplete="name">
+              </div>
+              <div class="setting-group">
+                <label for="authEmail">이메일 주소</label>
+                <input type="email" id="authEmail" class="input-modern" placeholder="user@example.com" required autocomplete="email">
+              </div>
+              <div class="setting-group">
+                <label for="authPassword">비밀번호</label>
+                <input type="password" id="authPassword" class="input-modern" placeholder="6자리 이상 비밀번호" required autocomplete="current-password">
+              </div>
+
+              <div id="authErrorMessage" class="auth-error" style="display:none;"></div>
+
+              <button type="submit" id="btnSubmitEmailAuth" class="btn-modal-primary" style="margin-top: 6px;">
+                로그인
+              </button>
+            </form>
+
+            <div class="auth-mode-switch">
+              <span id="authModeQuestion">계정이 없으신가요?</span>
+              <button type="button" id="btnToggleAuthMode" class="btn-text-link">회원가입하기</button>
+            </div>
+
+            <!-- Firebase Setup Notice (if not configured yet) -->
+            <div id="firebaseNoticeBox" class="firebase-notice-box" style="display:none;">
+              <div class="fnb-title">⚙️ Firebase 설정 안내</div>
+              <p>Firebase 무료 키가 등록되면 로그인 및 실시간 클라우드 DB가 즉시 활성화됩니다. 현재는 오프라인 로컬 저장소로 안전하게 동작 중입니다.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnCloseAuth" class="btn-modal-secondary">닫기 (게스트로 이용)</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <!-- Firebase v10 Compat SDK (CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
   <script>
     // Register Service Worker for PWA
