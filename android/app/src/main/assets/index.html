@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AMRAP 20">
+  <title>20분 AMRAP 운동 카운터</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800;900&family=Teko:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-wrapper">
+    <div class="app-container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-left">
+          <span class="badge-amrap">AMRAP 20</span>
+          <h1>루틴 카운터</h1>
+        </div>
+        <div class="header-right">
+          <button id="btnVoiceToggle" class="icon-btn" aria-label="음성 코치 토글" title="음성 코치 (TTS) 켜기/끄기">
+            <span class="icon">🗣️</span>
+          </button>
+          <button id="btnSoundToggle" class="icon-btn" aria-label="사운드 토글" title="사운드 온/오프">
+            <span class="icon">🔊</span>
+          </button>
+          <button id="btnFullscreen" class="icon-btn" aria-label="전체화면" title="전체화면 토글 (F)">
+            <span class="icon">⛶</span>
+          </button>
+          <button id="btnHistory" class="icon-btn" aria-label="운동 기록" title="기록 보기">
+            <span class="icon">📊</span>
+          </button>
+          <button id="btnSettings" class="icon-btn" aria-label="설정" title="시간 및 환경설정">
+            <span class="icon">⚙️</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Desktop Layout Grid Wrapper -->
+      <div class="main-content-grid">
+        
+        <!-- Left / Top Column: Timer & Live Stats -->
+        <div class="timer-column">
+          <!-- Timer Section -->
+          <section class="timer-section">
+            <div class="timer-card">
+              <div class="timer-ring-container">
+                <svg class="timer-ring-svg" viewBox="0 0 200 200">
+                  <circle class="timer-ring-bg" cx="100" cy="100" r="88" />
+                  <circle id="timerProgress" class="timer-ring-bar" cx="100" cy="100" r="88" />
+                </svg>
+                <div class="timer-content">
+                  <div id="timerDisplay" class="timer-display">20:00</div>
+                  <div id="timerStatus" class="timer-status">준비됨</div>
+                </div>
+              </div>
+
+              <div class="timer-controls">
+                <button id="btnStartPause" class="btn-primary-timer">
+                  <span class="btn-icon">▶</span>
+                  <span class="btn-text">운동 시작 (Space)</span>
+                </button>
+                <button id="btnReset" class="btn-secondary-timer" title="초기화 (R)">
+                  <span class="btn-icon">🔄</span>
+                </button>
+                <button id="btnFinishEarly" class="btn-secondary-timer" title="운동 완료">
+                  <span class="btn-icon">🏁</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Live Stats Overview -->
+          <section class="stats-overview">
+            <div class="stat-box main-stat">
+              <span class="stat-label">완료 세트</span>
+              <div class="stat-value-wrap">
+                <span id="statCompletedSets" class="stat-value highlight">0</span>
+                <span class="stat-unit">세트</span>
+              </div>
+              <span id="statCurrentRound" class="stat-sub">1 라운드 진행 중</span>
+            </div>
+
+            <div class="stat-box">
+              <span class="stat-label">총 횟수</span>
+              <div class="stat-value-wrap">
+                <span id="statTotalReps" class="stat-value">0</span>
+                <span class="stat-unit">회</span>
+              </div>
+              <span id="statPace" class="stat-sub">0.0 세트/분</span>
+            </div>
+
+            <div class="stat-box calorie-stat">
+              <span class="stat-label">소모 칼로리 (추정)</span>
+              <div class="stat-value-wrap">
+                <span id="statCalories" class="stat-value calorie-val">0</span>
+                <span class="stat-unit">kcal</span>
+              </div>
+              <span id="statWeightLabel" class="stat-sub">70kg 기준 (설정 가능)</span>
+            </div>
+          </section>
+
+          <!-- Keyboard Shortcuts Hint for Desktop Users -->
+          <div class="keyboard-hints desktop-only">
+            <div class="hints-title">⌨️ 단축키 안내</div>
+            <div class="hints-grid">
+              <span><kbd>Space</kbd> / <kbd>Enter</kbd> 완료</span>
+              <span><kbd>P</kbd> 시작/일시정지</span>
+              <span><kbd>U</kbd> 되돌리기</span>
+              <span><kbd>R</kbd> 리셋</span>
+              <span><kbd>F</kbd> 전체화면</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right / Bottom Column: Routine Exercise Cards -->
+        <div class="routine-column">
+          <section class="exercise-section">
+            <div class="section-title-wrap">
+              <h2>1세트 루틴 순서</h2>
+              <button id="btnUndo" class="btn-undo" title="이전 동작 취소 (U)">
+                <span>↩ 되돌리기 (U)</span>
+              </button>
+            </div>
+
+            <div class="exercise-cards">
+              <!-- Exercise 1: Pull-up -->
+              <div class="exercise-card" id="cardPullup" data-step="0">
+                <div class="card-glow"></div>
+                <div class="card-badge">STEP 1</div>
+                <div class="card-main">
+                  <div class="card-info">
+                    <span class="ex-emoji">🧗‍♂️</span>
+                    <div>
+                      <h3 class="ex-name">턱걸이 <small>(풀업)</small></h3>
+                      <p class="ex-target">목표: <strong>5개</strong></p>
+                    </div>
+                  </div>
+                  <div class="card-count">
+                    <span class="reps-done" id="repsPullup">0</span>
+                    <span class="reps-label">회 완료</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-step-done" id="btnDonePullup">
+                    <span>턱걸이 5개 완료</span>
+                    <span class="plus-badge">+5</span>
+                  </button>
+                  <div class="rep-adjusters">
+                    <button class="btn-adjust" data-ex="pullup" data-delta="-1" title="1회 감소">-1</button>
+                    <button class="btn-adjust" data-ex="pullup" data-delta="1" title="1회 추가">+1</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Exercise 2: Push-up -->
+              <div class="exercise-card" id="cardPushup" data-step="1">
+                <div class="card-glow"></div>
+                <div class="card-badge">STEP 2</div>
+                <div class="card-main">
+                  <div class="card-info">
+                    <span class="ex-emoji">💪</span>
+                    <div>
+                      <h3 class="ex-name">팔굽혀펴기 <small>(푸시업)</small></h3>
+                      <p class="ex-target">목표: <strong>15개</strong></p>
+                    </div>
+                  </div>
+                  <div class="card-count">
+                    <span class="reps-done" id="repsPushup">0</span>
+                    <span class="reps-label">회 완료</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-step-done" id="btnDonePushup">
+                    <span>팔굽혀펴기 15개 완료</span>
+                    <span class="plus-badge">+15</span>
+                  </button>
+                  <div class="rep-adjusters">
+                    <button class="btn-adjust" data-ex="pushup" data-delta="-1" title="1회 감소">-1</button>
+                    <button class="btn-adjust" data-ex="pushup" data-delta="1" title="1회 추가">+1</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Exercise 3: Squat -->
+              <div class="exercise-card" id="cardSquat" data-step="2">
+                <div class="card-glow"></div>
+                <div class="card-badge">STEP 3 (세트완료)</div>
+                <div class="card-main">
+                  <div class="card-info">
+                    <span class="ex-emoji">🦵</span>
+                    <div>
+                      <h3 class="ex-name">스쿼트 <small>(맨몸스쿼트)</small></h3>
+                      <p class="ex-target">목표: <strong>20개</strong></p>
+                    </div>
+                  </div>
+                  <div class="card-count">
+                    <span class="reps-done" id="repsSquat">0</span>
+                    <span class="reps-label">회 완료</span>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button class="btn-step-done" id="btnDoneSquat">
+                    <span>스쿼트 20개 완료 (세트 마무리!)</span>
+                    <span class="plus-badge">+20</span>
+                  </button>
+                  <div class="rep-adjusters">
+                    <button class="btn-adjust" data-ex="squat" data-delta="-1" title="1회 감소">-1</button>
+                    <button class="btn-adjust" data-ex="squat" data-delta="1" title="1회 추가">+1</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </div>
+
+      <!-- Bottom Massive Action Button -->
+      <div class="bottom-action-bar">
+        <button id="btnMassiveAction" class="btn-massive-action">
+          <div class="massive-action-content">
+            <span id="massiveActionSubtitle" class="action-subtitle">현재 단계</span>
+            <span id="massiveActionTitle" class="action-title">🔥 턱걸이 5개 완료하기</span>
+          </div>
+          <div class="action-btn-right">
+            <span class="kbd-badge desktop-only">Space / 클릭</span>
+            <span class="action-arrow">➔</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Workout Summary Modal -->
+      <div id="modalSummary" class="modal-overlay">
+        <div class="modal-card modal-card-lg">
+          <div class="modal-header">
+            <div class="celebrate-icon">🏆</div>
+            <h2>운동 완료 & 성과 분석</h2>
+            <p id="summarySubtitle">20분 동안 한계를 뛰어넘으셨습니다!</p>
+          </div>
+          <div class="modal-body">
+            <!-- Score & Sets -->
+            <div class="summary-highlight-box">
+              <div class="summary-score-title">최종 달성 기록</div>
+              <div class="summary-score-value">
+                <span id="sumTotalSets">0</span> <small>세트</small>
+                <span id="sumExtraRepsWrap" class="extra-reps-text">+ <span id="sumExtraReps">0</span>회</span>
+              </div>
+            </div>
+
+            <!-- Reps Breakdown Grid -->
+            <div class="summary-grid">
+              <div class="summary-grid-item">
+                <span class="sg-icon">🧗‍♂️</span>
+                <span class="sg-name">턱걸이 (5개/세트)</span>
+                <span id="sumPullups" class="sg-value">0회</span>
+              </div>
+              <div class="summary-grid-item">
+                <span class="sg-icon">💪</span>
+                <span class="sg-name">팔굽혀펴기 (15개/세트)</span>
+                <span id="sumPushups" class="sg-value">0회</span>
+              </div>
+              <div class="summary-grid-item">
+                <span class="sg-icon">🦵</span>
+                <span class="sg-name">스쿼트 (20개/세트)</span>
+                <span id="sumSquats" class="sg-value">0회</span>
+              </div>
+              <div class="summary-grid-item">
+                <span class="sg-icon">⚡</span>
+                <span class="sg-name">총 반복 횟수</span>
+                <span id="sumGrandTotal" class="sg-value">0회</span>
+              </div>
+            </div>
+
+            <!-- Detailed Calorie & Energy Analytics Card -->
+            <div class="calorie-analytics-card">
+              <div class="cac-header">
+                <span class="cac-title">🔥 에너지 소비 및 칼로리 정밀 분석</span>
+                <span class="cac-badge">METs & 일량 기반</span>
+              </div>
+              <div class="cac-main">
+                <div class="cac-item">
+                  <span class="cac-label">운동 중 직접 소모</span>
+                  <span id="cacDirectCalories" class="cac-val">0 kcal</span>
+                </div>
+                <div class="cac-item">
+                  <span class="cac-label">애프터번 효과 (EPOC)</span>
+                  <span id="cacEpocCalories" class="cac-val text-amber">+0 kcal</span>
+                </div>
+                <div class="cac-item cac-total">
+                  <span class="cac-label">총 추정 소비 칼로리</span>
+                  <span id="cacTotalCalories" class="cac-val highlight-cal">0 kcal</span>
+                </div>
+              </div>
+              <div class="cac-volume-row">
+                <span>🏋️‍♂️ 총 들어올린 물리적 중량 (Work Volume)</span>
+                <strong id="cacWorkVolume">약 0 kg</strong>
+              </div>
+            </div>
+
+            <!-- User Calibration Bar (신뢰성 향상을 위한 사용자 입력) -->
+            <div class="user-calibration-card">
+              <div class="ucc-header">
+                <span>👤 내 신체 정보로 칼로리 정확도 높이기</span>
+              </div>
+              <div class="ucc-inputs">
+                <div class="ucc-input-group">
+                  <label for="summaryWeightInput">체중(kg)</label>
+                  <input type="number" id="summaryWeightInput" min="30" max="250" value="70">
+                </div>
+                <div class="ucc-input-group">
+                  <label for="summaryGenderSelect">성별</label>
+                  <select id="summaryGenderSelect">
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                  </select>
+                </div>
+                <div class="ucc-input-group">
+                  <label for="summaryIntensitySelect">체감 난이도</label>
+                  <select id="summaryIntensitySelect">
+                    <option value="1.0">보통 (RPE 7)</option>
+                    <option value="1.15" selected>고강도 (RPE 8.5)</option>
+                    <option value="1.3">한계 돌파 (RPE 10)</option>
+                  </select>
+                </div>
+              </div>
+              <p class="ucc-tip">💡 맨몸운동은 체중에 비례해 일량($W=mgh$)이 달라지므로, 실제 체중을 입력할 때 가장 신뢰성 높은 결과가 산출됩니다.</p>
+            </div>
+
+            <!-- Achieved Fitness Benefits (얻을 수 있는 신체적 결과물) -->
+            <div class="fitness-benefits-card">
+              <div class="fbc-title">🎯 이번 20분 세션으로 얻은 신체적 이점</div>
+              <div class="fbc-list">
+                <div class="fbc-item">
+                  <span class="fbc-icon">🧗‍♂️</span>
+                  <div>
+                    <strong>상체 당기기 & 자세 교정 (턱걸이)</strong>
+                    <p>광배근·대원근·이두근 자극 및 견갑골 하강 안정화로 굽은 등과 라운드숄더 개선에 탁월합니다.</p>
+                  </div>
+                </div>
+                <div class="fbc-item">
+                  <span class="fbc-icon">💪</span>
+                  <div>
+                    <strong>상체 밀기 & 코어 안정성 (팔굽혀펴기)</strong>
+                    <p>대흉근(가슴)과 삼두근의 근지구력을 한계까지 펌핑하며, 플랭크 코어 지지력을 함께 단련합니다.</p>
+                  </div>
+                </div>
+                <div class="fbc-item">
+                  <span class="fbc-icon">🦵</span>
+                  <div>
+                    <strong>하체 파워 & 기초대사 증대 (스쿼트)</strong>
+                    <p>인체 최대 근육군인 대퇴사두근과 둔근을 자극하여 혈당 조절 및 전신 혈액순환을 강력히 촉진합니다.</p>
+                  </div>
+                </div>
+                <div class="fbc-item">
+                  <span class="fbc-icon">⚡</span>
+                  <div>
+                    <strong>대사 활성화 & 심폐지구력 (AMRAP HIIT)</strong>
+                    <p>무산소·유산소 하이브리드 부하로 최대산소섭취량(VO2 Max)을 자극하고 운동 후 24시간 애프터번을 유도합니다.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Duration & Pace Info -->
+            <div class="summary-info-row">
+              <span>⏱ 실제 운동 시간</span>
+              <strong id="sumDuration">20:00</strong>
+            </div>
+            <div class="summary-info-row">
+              <span>⚡ 평균 세트 페이스</span>
+              <strong id="sumAvgPace">-</strong>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnShareRecord" class="btn-modal-share">📋 성과 요약 복사 (카톡/SNS 공유)</button>
+            <button id="btnSaveRecord" class="btn-modal-primary">기록 저장하기</button>
+            <button id="btnCloseSummary" class="btn-modal-secondary">닫기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- History Modal -->
+      <div id="modalHistory" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div class="celebrate-icon">📊</div>
+            <h2>운동 기록 히스토리</h2>
+            <p>이전 20분 AMRAP 챌린지 기록들입니다.</p>
+          </div>
+          <div class="modal-body history-list-container">
+            <div id="historyList" class="history-list">
+              <!-- Dynamic items -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnClearHistory" class="btn-modal-danger">기록 전체 삭제</button>
+            <button id="btnCloseHistory" class="btn-modal-secondary">닫기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Modal -->
+      <div id="modalSettings" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-header">
+            <div class="celebrate-icon">⚙️</div>
+            <h2>환경설정 & 사용자 프로필</h2>
+            <p>운동 시간 및 정확한 칼로리 측정을 위한 신체 정보를 설정합니다.</p>
+          </div>
+          <div class="modal-body">
+            <!-- User Body Profile Section -->
+            <div class="setting-section-box">
+              <h3 class="setting-subhead">👤 사용자 신체 프로필 (칼로리 정밀 계산)</h3>
+              <div class="setting-grid-2col">
+                <div class="setting-group">
+                  <label for="settingWeight">체중 (kg)</label>
+                  <input type="number" id="settingWeight" min="30" max="250" value="70" class="input-modern">
+                </div>
+                <div class="setting-group">
+                  <label for="settingAge">나이 (만 나이)</label>
+                  <input type="number" id="settingAge" min="10" max="100" value="30" class="input-modern">
+                </div>
+              </div>
+              <div class="setting-grid-2col">
+                <div class="setting-group">
+                  <label for="settingGender">성별</label>
+                  <select id="settingGender" class="input-modern">
+                    <option value="male">남성</option>
+                    <option value="female">여성</option>
+                  </select>
+                </div>
+                <div class="setting-group">
+                  <label for="settingIntensity">기본 체감 강도</label>
+                  <select id="settingIntensity" class="input-modern">
+                    <option value="1.0">보통 (RPE 7)</option>
+                    <option value="1.15" selected>고강도 (RPE 8.5)</option>
+                    <option value="1.3">한계 돌파 (RPE 10)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Timer Presets -->
+            <div class="setting-group">
+              <label>⏱ 제한 시간 선택</label>
+              <div class="time-presets">
+                <button class="btn-preset active" data-minutes="20">20분 (표준)</button>
+                <button class="btn-preset" data-minutes="15">15분</button>
+                <button class="btn-preset" data-minutes="10">10분</button>
+                <button class="btn-preset" data-minutes="5">5분</button>
+              </div>
+            </div>
+
+            <!-- Voice & Vibration Toggles -->
+            <div class="setting-group">
+              <label>🗣️ 음성 코치 (TTS)</label>
+              <div class="toggle-switch-row">
+                <span>단계 전환 시 한국어 음성 안내</span>
+                <input type="checkbox" id="toggleVoice" checked>
+              </div>
+            </div>
+            <div class="setting-group">
+              <label>📳 진동 피드백 (모바일)</label>
+              <div class="toggle-switch-row">
+                <span>버튼 클릭 시 진동 울림</span>
+                <input type="checkbox" id="toggleVibration" checked>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btnSaveSettings" class="btn-modal-primary">설정 저장하기</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.log('SW registration note:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
